@@ -61,6 +61,28 @@ Aðgangstókar eru geymdir dulkóðaðir (AES-256-GCM) í gagnagrunninum.
 
 Settu `AUGLYSING_API_URL` og `AUGLYSING_API_KEY` í `.env`. Án þeirra eru auglýsingar vistaðar sem drög. Aðlaga þarf `src/lib/integrations/auglysing.ts` að API-i auglýsing.app þegar skjölun þess liggur fyrir.
 
+## Hýsing á Railway
+
+1. **railway.com → New Project → Deploy from GitHub repo** og veldu `JKJ_VRM` (grein: `claude/real-estate-crm-system-lmetga` eða `main` eftir sameiningu)
+2. Í þjónustunni: **Settings → Volumes → Add volume**, mount path `/data` (geymir gagnagrunn og myndir varanlega)
+3. **Variables**: bættu við:
+
+   | Breyta | Gildi |
+   |---|---|
+   | `DATABASE_URL` | `file:/data/crm.db` |
+   | `UPLOAD_DIR` | `/data/uploads` |
+   | `AUTH_SECRET` | langur handahófskenndur strengur (t.d. úr `openssl rand -base64 32`) |
+   | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | fyrsti stjórnandi |
+   | `APP_URL` | slóðin sem Railway gefur, t.d. `https://jkj-crm.up.railway.app` |
+   | `AUGLYSING_API_URL` / `AUGLYSING_API_KEY` | frá auglýsing.app |
+   | `ANTHROPIC_API_KEY` | fyrir Claude (valkvætt) |
+   | `MS_CLIENT_ID` / `MS_CLIENT_SECRET` / `MS_TENANT_ID` | fyrir Microsoft 365 (valkvætt) |
+
+4. **Settings → Networking → Generate Domain** (eða tengja eigið lén)
+5. Muna að bæta `https://<lénið>/api/microsoft/callback` við Redirect URI í Entra
+
+`railway.json` sér um að byggja kerfið og við hverja ræsingu uppfærist gagnagrunnurinn og stjórnandinn er stofnaður ef hann vantar.
+
 ## Tækni
 
 - **Next.js 15** (App Router, Server Actions) + **React 19** + **Tailwind CSS 4**

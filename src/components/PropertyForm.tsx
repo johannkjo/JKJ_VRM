@@ -18,6 +18,7 @@ export default function PropertyForm({ action, p, sellers }: {
         <Select name="type" label="Tegund" options={PROPERTY_TYPES} defaultValue={p?.type ?? "APARTMENT"} required />
         <Select name="status" label="Staða" options={PROPERTY_STATUS} defaultValue={p?.status ?? "VALUATION"} />
         <Text name="fastanumer" label="Fastanúmer" defaultValue={p?.fastanumer} />
+        <Text name="listingUrl" label="Slóð á eignina á fasteignavef (fyrir auglýsing.app)" type="url" placeholder="https://www.remax.is/…" defaultValue={p?.listingUrl} className="sm:col-span-4" />
         <div className="sm:col-span-4">
           <label className="lbl" htmlFor="sellerId">Seljandi / leigusali</label>
           <select id="sellerId" name="sellerId" className="input" defaultValue={p?.sellerId ?? ""}>

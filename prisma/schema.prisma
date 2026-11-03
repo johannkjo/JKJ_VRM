@@ -116,6 +116,7 @@ model Property {
   elevator      Boolean  @default(false)
   description   String?
   features      String?  // frjáls texti / kommuaðskilið
+  listingUrl    String?  // slóð á eignina á fasteignavef (t.d. remax.is) – auglýsing.app sækir gögn þaðan
   // Auglýsing (auglýsing.app)
   adStatus      String   @default("NONE") // NONE, DRAFT, PUBLISHED
   adExternalId  String?

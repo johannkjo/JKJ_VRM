@@ -15,6 +15,7 @@ function propertyData(fd: FormData) {
     postcode: req(fd, "postcode"),
     city: str(fd, "city"),
     fastanumer: str(fd, "fastanumer"),
+    listingUrl: str(fd, "listingUrl"),
     type: req(fd, "type"),
     listing: req(fd, "listing"),
     status: str(fd, "status") ?? "VALUATION",

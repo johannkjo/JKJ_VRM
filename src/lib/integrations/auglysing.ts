@@ -1,4 +1,5 @@
-// Tenging við auglýsingakerfið auglýsing.app.
+// Tenging við auglýsing.app (Eignaauglýsingar) – býr til herferðir fyrir Instagram,
+// Facebook og TikTok út frá slóð á eign.
 //
 // ATH: API-skjölun auglýsing.app liggur ekki fyrir enn. Þegar slóð og lykill
 // eru stillt (AUGLYSING_API_URL / AUGLYSING_API_KEY) er eignin send sem JSON;
@@ -12,6 +13,7 @@ export type PublishResult = { published: boolean; externalId?: string; message: 
 function toPayload(p: Property) {
   return {
     externalRef: p.id,
+    url: p.listingUrl, // auglýsing.app sækir upplýsingar og myndir af þessari slóð
     title: `${p.address}, ${p.postcode} ${p.city ?? ""}`.trim(),
     listing: p.listing,
     listingLabel: label(LISTING, p.listing),
