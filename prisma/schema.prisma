@@ -1,0 +1,206 @@
+// Gagnalíkan fyrir CRM fasteignasölu.
+// Strengir eru notaðir í stað enum svo auðvelt sé að skipta milli SQLite og PostgreSQL.
+// Leyfð gildi eru skilgreind í src/lib/constants.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         String     @default("AGENT") // ADMIN | AGENT
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  contacts     Contact[]
+  properties   Property[]
+  deals        Deal[]
+  tasks        Task[]
+  activities   Activity[]
+}
+
+model Contact {
+  id         String   @id @default(cuid())
+  name       String
+  kennitala  String?
+  email      String?
+  phone      String?
+  company    String?
+  roles      String   @default("") // kommuaðskilið: BUYER,SELLER,TENANT,LANDLORD,PARTNER
+  source     String?  // Hvaðan kom tengiliðurinn (opið hús, vefur, meðmæli…)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  ownerId    String
+  owner      User     @relation(fields: [ownerId], references: [id])
+
+  // Leitarprófíll (kaupandi/leigjandi) – notað í sjálfvirkri pörun
+  searchActive   Boolean @default(false)
+  searchListing  String? // SALE | RENT
+  searchTypes    String? // kommuaðskildar eignagerðir
+  searchPostcodes String? // kommuaðskilin póstnúmer
+  searchMinPrice Int?
+  searchMaxPrice Int?
+  searchMinSize  Float?
+  searchMaxSize  Float?
+  searchMinRooms Int?
+  searchNotes    String?
+
+  propertiesOwned Property[]       @relation("PropertySeller")
+  dealsAsBuyer    Deal[]           @relation("DealBuyer")
+  dealsAsSeller   Deal[]           @relation("DealSeller")
+  activities      Activity[]
+  tasks           Task[]
+  attendances     ShowingAttendee[]
+  offers          Offer[]
+}
+
+model Property {
+  id            String   @id @default(cuid())
+  address       String
+  postcode      String
+  city          String?
+  fastanumer    String?
+  type          String   // APARTMENT, DETACHED, SEMI, ROW, SUMMER, COMMERCIAL, LAND
+  listing       String   @default("SALE") // SALE | RENT
+  status        String   @default("VALUATION") // VALUATION, ACTIVE, RESERVED, SOLD, RENTED, WITHDRAWN
+  price         Int?     // ásett verð (sala) eða mánaðarleiga (leiga)
+  size          Float?   // fermetrar
+  rooms         Int?
+  bedrooms      Int?
+  bathrooms     Int?
+  yearBuilt     Int?
+  fasteignamat  Int?
+  brunabotamat  Int?
+  garage        Boolean  @default(false)
+  elevator      Boolean  @default(false)
+  description   String?
+  features      String?  // frjáls texti / kommuaðskilið
+  // Auglýsing (auglýsing.app)
+  adStatus      String   @default("NONE") // NONE, DRAFT, PUBLISHED
+  adExternalId  String?
+  adPublishedAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  sellerId      String?
+  seller        Contact? @relation("PropertySeller", fields: [sellerId], references: [id])
+  agentId       String
+  agent         User     @relation(fields: [agentId], references: [id])
+
+  deals      Deal[]
+  showings   Showing[]
+  activities Activity[]
+  tasks      Task[]
+}
+
+model Deal {
+  id             String    @id @default(cuid())
+  title          String
+  stage          String    @default("LEAD")
+  listing        String    @default("SALE") // SALE | RENT
+  value          Int?      // áætlað kaupverð / ársleiga
+  commissionPct  Float?    // söluþóknun %
+  commissionFlat Int?      // eða föst þóknun
+  expectedClose  DateTime?
+  notes          String?
+  lostReason     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  propertyId     String?
+  property       Property? @relation(fields: [propertyId], references: [id])
+  buyerId        String?
+  buyer          Contact?  @relation("DealBuyer", fields: [buyerId], references: [id])
+  sellerId       String?
+  seller         Contact?  @relation("DealSeller", fields: [sellerId], references: [id])
+  agentId        String
+  agent          User      @relation(fields: [agentId], references: [id])
+
+  checklist  ChecklistItem[]
+  offers     Offer[]
+  activities Activity[]
+  tasks      Task[]
+}
+
+model ChecklistItem {
+  id      String  @id @default(cuid())
+  label   String
+  done    Boolean @default(false)
+  order   Int     @default(0)
+  dealId  String
+  deal    Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+}
+
+model Offer {
+  id          String    @id @default(cuid())
+  amount      Int
+  conditions  String?   // fyrirvarar
+  expiresAt   DateTime?
+  status      String    @default("PENDING") // PENDING, COUNTERED, ACCEPTED, REJECTED, EXPIRED
+  createdAt   DateTime  @default(now())
+  dealId      String
+  deal        Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  bidderId    String?
+  bidder      Contact?  @relation(fields: [bidderId], references: [id])
+}
+
+model Showing {
+  id         String   @id @default(cuid())
+  kind       String   @default("OPEN_HOUSE") // OPEN_HOUSE | PRIVATE
+  startsAt   DateTime
+  endsAt     DateTime?
+  notes      String?
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  attendees  ShowingAttendee[]
+}
+
+model ShowingAttendee {
+  id        String   @id @default(cuid())
+  interest  Int?     // 1–5
+  feedback  String?
+  createdAt DateTime @default(now())
+  showingId String
+  showing   Showing  @relation(fields: [showingId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+}
+
+model Activity {
+  id         String    @id @default(cuid())
+  type       String    // CALL, EMAIL, MEETING, NOTE, SHOWING, SMS
+  body       String
+  occurredAt DateTime  @default(now())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  dealId     String?
+  deal       Deal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id         String    @id @default(cuid())
+  title      String
+  dueAt      DateTime?
+  done       Boolean   @default(false)
+  doneAt     DateTime?
+  priority   Int       @default(2) // 1 há, 2 venjuleg, 3 lág
+  createdAt  DateTime  @default(now())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  dealId     String?
+  deal       Deal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+}

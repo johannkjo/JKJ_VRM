@@ -1,0 +1,9 @@
+{
+  "name": "JKJ CRM",
+  "short_name": "CRM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#1f7a6b",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

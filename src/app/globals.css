@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef6f4;
+  --color-brand-100: #d5ebe6;
+  --color-brand-500: #1f7a6b;
+  --color-brand-600: #186357;
+  --color-brand-700: #124b42;
+}
+
+@layer components {
+  .card { @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm; }
+  .btn { @apply inline-flex items-center justify-center gap-1 rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50; }
+  .btn-danger { @apply inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50; }
+  .input { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100; }
+  .lbl { @apply mb-1 block text-xs font-medium text-slate-600; }
+  .badge { @apply inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700; }
+  .h1 { @apply text-xl font-semibold text-slate-900 sm:text-2xl; }
+  .h2 { @apply mb-3 text-base font-semibold text-slate-900; }
+  .muted { @apply text-sm text-slate-500; }
+  .link { @apply text-brand-600 hover:underline; }
+}
+
+body { @apply bg-slate-50 text-slate-800 antialiased; }
