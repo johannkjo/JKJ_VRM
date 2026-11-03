@@ -66,6 +66,10 @@ async function main() {
     data: { agentId: admin.id, title: "Skólavörðustígur 12 – leiga", listing: "RENT", stage: "OFFER", propertyId: atvinnu.id, sellerId: seljandi2.id, buyerId: leigutaki.id,
       value: 9_000_000, commissionFlat: 750_000, checklist: { create: DEFAULT_RENT_CHECKLIST.map((label, order) => ({ label, order, done: order < 3 })) } },
   });
+  await db.deal.create({
+    data: { agentId: admin.id, title: "Ármúli 4 – leiga (Tækniþjónustan)", listing: "RENT", stage: "CLOSED", sellerId: seljandi2.id, value: 6_600_000, commissionFlat: 550_000,
+      leaseStart: day(-700), leaseEnd: day(120), leaseMonthlyRent: 550_000, leaseIndexed: true, leaseIndexBase: "VNV janúar 2025", leaseNoticeMonths: 6 },
+  });
   await db.deal.create({ data: { agentId: admin.id, title: "Verðmat – Hraunbrún 5", listing: "SALE", stage: "VALUATION", commissionPct: 1.8, value: 135_000_000 } });
 
   const sh = await db.showing.create({ data: { propertyId: ibud.id, kind: "OPEN_HOUSE", startsAt: day(2, 17), endsAt: day(2, 18) } });

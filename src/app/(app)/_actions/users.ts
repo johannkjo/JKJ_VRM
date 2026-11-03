@@ -37,3 +37,9 @@ export async function changePassword(_prev: string | null, fd: FormData): Promis
   await db.user.update({ where: { id: s.userId }, data: { passwordHash: await bcrypt.hash(next, 10) } });
   return "Lykilorði breytt ✓";
 }
+
+export async function disconnectMicrosoft() {
+  const s = await requireUser();
+  await db.msAccount.deleteMany({ where: { userId: s.userId } });
+  revalidatePath("/notendur");
+}

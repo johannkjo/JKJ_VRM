@@ -2,7 +2,7 @@ import type { Deal } from "@prisma/client";
 import { DEAL_STAGES, LISTING } from "@/lib/constants";
 import { toInputDate } from "@/lib/format";
 import { Submit } from "./Buttons";
-import { Area, Select, Text } from "./Fields";
+import { Area, Check, Select, Text } from "./Fields";
 
 type Opt = { id: string; name: string };
 
@@ -44,6 +44,18 @@ export default function DealForm({ action, d, contacts, properties, defaults }: 
         <Text name="commissionFlat" label="eða föst þóknun (kr.)" inputMode="numeric" defaultValue={d?.commissionFlat} />
         <Area name="notes" label="Athugasemdir" defaultValue={d?.notes} className="sm:col-span-2" />
       </section>
+      <details className="card" open={(d?.listing ?? prop?.listing) === "RENT"}>
+        <summary className="cursor-pointer font-semibold">Leigusamningur (fyrir leigu)</summary>
+        <p className="muted mt-1">Þegar leiga er merkt „Afsal / lokið“ býr kerfið til áminningar um endurnýjun og lok samnings.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Text name="leaseStart" label="Upphaf leigu" type="date" defaultValue={toInputDate(d?.leaseStart)} />
+          <Text name="leaseEnd" label="Lok leigu" type="date" defaultValue={toInputDate(d?.leaseEnd)} />
+          <Text name="leaseMonthlyRent" label="Mánaðarleiga (kr.)" inputMode="numeric" defaultValue={d?.leaseMonthlyRent} />
+          <Text name="leaseNoticeMonths" label="Áminning um endurnýjun (mánuðum fyrir lok)" inputMode="numeric" defaultValue={d?.leaseNoticeMonths ?? 6} />
+          <Text name="leaseIndexBase" label="Grunnvísitala" placeholder="t.d. VNV febrúar 2026" defaultValue={d?.leaseIndexBase} />
+          <div className="flex items-end pb-2"><Check name="leaseIndexed" label="Leiga vísitölutengd" defaultChecked={d?.leaseIndexed} /></div>
+        </div>
+      </details>
       <Submit>Vista</Submit>
     </form>
   );

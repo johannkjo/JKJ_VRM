@@ -24,7 +24,10 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
       ...(type ? { type } : {}),
       ...(q ? { OR: [{ address: { contains: q } }, { postcode: { contains: q } }, { fastanumer: { contains: q } }] } : {}),
     },
-    include: { seller: { select: { name: true } } },
+    include: {
+      seller: { select: { name: true } },
+      documents: { where: { kind: "PHOTO" }, orderBy: { createdAt: "asc" }, take: 1, select: { id: true } },
+    },
     orderBy: { updatedAt: "desc" },
   });
 
@@ -53,7 +56,11 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {props.length === 0 && <p className="muted">Engar eignir fundust.</p>}
         {props.map((p) => (
-          <Link key={p.id} href={`/eignir/${p.id}`} className="card block hover:border-brand-500">
+          <Link key={p.id} href={`/eignir/${p.id}`} className="card block overflow-hidden hover:border-brand-500">
+            {p.documents[0] && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/skjol/${p.documents[0].id}`} alt="" className="-mx-4 -mt-4 mb-3 aspect-[16/9] w-[calc(100%+2rem)] max-w-none object-cover" />
+            )}
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-medium">{p.address}</p>

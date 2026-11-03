@@ -4,7 +4,7 @@ import { ownerScope, requireUser } from "@/lib/auth";
 import { CONTACT_ROLES, DEAL_STAGES, OPEN_STAGES, SHOWING_KINDS, label } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { commission } from "@/lib/deals";
-import { dateTime, mkr } from "@/lib/format";
+import { date, dateTime, mkr } from "@/lib/format";
 import { matchProperty } from "@/lib/matching";
 
 function Stat({ label, value, href, sub }: { label: string; value: string | number; href?: string; sub?: string }) {
@@ -26,7 +26,8 @@ export default async function Dashboard() {
   const in7 = new Date(now.getTime() + 7 * 864e5);
   const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
 
-  const [tasks, showings, deals, activeProps, buyers, newContacts, closedThisYear, sources] = await Promise.all([
+  const in12m = new Date(now.getTime() + 365 * 864e5);
+  const [tasks, showings, deals, activeProps, buyers, newContacts, closedThisYear, sources, leases] = await Promise.all([
     db.task.findMany({
       where: { ...ownerScope(s, "userId"), done: false, OR: [{ dueAt: { lte: endOfToday } }, { dueAt: null }] },
       include: { contact: { select: { id: true, name: true } }, property: { select: { id: true, address: true } }, deal: { select: { id: true, title: true } } },
@@ -44,6 +45,10 @@ export default async function Dashboard() {
     db.contact.count({ where: { ...ownerScope(s, "ownerId"), createdAt: { gte: new Date(now.getTime() - 30 * 864e5) } } }),
     db.deal.findMany({ where: { ...ownerScope(s, "agentId"), stage: "CLOSED", updatedAt: { gte: yearStart } } }),
     db.contact.groupBy({ by: ["source"], where: { ...ownerScope(s, "ownerId"), source: { not: null } }, _count: true, orderBy: { _count: { source: "desc" } }, take: 6 }),
+    db.deal.findMany({
+      where: { ...ownerScope(s, "agentId"), listing: "RENT", stage: "CLOSED", leaseEnd: { gte: now, lte: in12m } },
+      orderBy: { leaseEnd: "asc" },
+    }),
   ]);
 
   const pipelineCommission = deals.reduce((sum, d) => sum + (commission(d) ?? 0), 0);
@@ -140,6 +145,25 @@ export default async function Dashboard() {
           <p className="mt-3 text-xs text-slate-400">Hlutverk: {Object.values(CONTACT_ROLES).join(", ")}</p>
         </section>
       </div>
+
+        {leases.length > 0 && (
+          <section className="card">
+            <h2 className="h2">Leigusamningar sem renna út á næstu 12 mánuðum</h2>
+            <ul className="divide-y divide-slate-100 text-sm">
+              {leases.map((d) => {
+                const months = Math.round((d.leaseEnd!.getTime() - now.getTime()) / (30.4 * 864e5));
+                return (
+                  <li key={d.id} className="flex flex-wrap justify-between gap-2 py-2">
+                    <Link href={`/solur/${d.id}`} className="link">{d.title}</Link>
+                    <span className={months <= (d.leaseNoticeMonths ?? 6) ? "font-medium text-red-600" : "text-slate-500"}>
+                      {date(d.leaseEnd)} · eftir {months} mán.{d.leaseIndexed ? " · vísitölutengd" : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
     </div>
   );
 }

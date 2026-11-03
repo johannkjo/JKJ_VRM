@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 import Activities from "@/components/Activities";
 import { ConfirmSubmit } from "@/components/Buttons";
 import Tasks from "@/components/Tasks";
+import ContactSummary from "@/components/ContactSummary";
+import EmailComposer from "@/components/EmailComposer";
+import OutlookMails from "@/components/OutlookMails";
+import Documents from "@/components/Documents";
+import { Suspense } from "react";
 import { ownerScope, requireUser } from "@/lib/auth";
 import { CONTACT_ROLES, DEAL_STAGES, LISTING, PROPERTY_STATUS, PROPERTY_TYPES, label, splitList } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -32,6 +37,8 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
       ).slice(0, 10)
     : [];
   const deals = [...c.dealsAsBuyer, ...c.dealsAsSeller];
+  const msConnected = Boolean(await db.msAccount.findUnique({ where: { userId: s.userId }, select: { id: true } }));
+  const documents = await db.document.findMany({ where: { contactId: id }, orderBy: { createdAt: "desc" } });
   const back = `/tengilidir/${id}`;
 
   return (
@@ -104,6 +111,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="space-y-4 lg:col-span-2">
+          <ContactSummary contactId={id} />
           {c.searchActive && (
             <section className="card">
               <h2 className="h2">Eignir sem passa ({matches.length})</h2>
@@ -122,7 +130,14 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
             </section>
           )}
           <Tasks items={c.tasks} links={{ contactId: id }} back={back} />
+          {c.email && <EmailComposer contactId={id} email={c.email} msConnected={msConnected} />}
+          {c.email && msConnected && (
+            <Suspense fallback={<section className="card muted">Sæki pósta úr Outlook…</section>}>
+              <OutlookMails userId={s.userId} email={c.email} />
+            </Suspense>
+          )}
           <Activities items={c.activities} links={{ contactId: id }} back={back} />
+          <Documents items={documents} links={{ contactId: id }} back={back} />
         </div>
       </div>
     </div>

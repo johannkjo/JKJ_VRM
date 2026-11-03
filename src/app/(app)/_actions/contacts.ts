@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { removeFilesFor } from "@/lib/storage";
 import { float, int, list, req, str, bool } from "@/lib/forms";
 import { assertCanAccess } from "./guard";
 
@@ -50,6 +51,7 @@ export async function deleteContact(id: string) {
   const s = await requireUser();
   const c = await db.contact.findUniqueOrThrow({ where: { id } });
   assertCanAccess(s, c.ownerId);
+  await removeFilesFor({ contactId: id });
   await db.$transaction([
     db.property.updateMany({ where: { sellerId: id }, data: { sellerId: null } }),
     db.deal.updateMany({ where: { buyerId: id }, data: { buyerId: null } }),

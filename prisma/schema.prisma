@@ -24,6 +24,38 @@ model User {
   deals        Deal[]
   tasks        Task[]
   activities   Activity[]
+  msAccount    MsAccount?
+  documents    Document[]
+}
+
+// Tenging notanda við Microsoft 365 (tókar dulkóðaðir með AUTH_SECRET)
+model MsAccount {
+  id           String   @id @default(cuid())
+  email        String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id         String    @id @default(cuid())
+  name       String    // upprunalegt skráarheiti
+  storedName String    @unique // nafn á diski
+  mime       String
+  size       Int
+  kind       String    @default("DOC") // PHOTO | DOC
+  createdAt  DateTime  @default(now())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  dealId     String?
+  deal       Deal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
 }
 
 model Contact {
@@ -60,6 +92,7 @@ model Contact {
   tasks           Task[]
   attendances     ShowingAttendee[]
   offers          Offer[]
+  documents       Document[]
 }
 
 model Property {
@@ -98,6 +131,7 @@ model Property {
   showings   Showing[]
   activities Activity[]
   tasks      Task[]
+  documents  Document[]
 }
 
 model Deal {
@@ -111,6 +145,13 @@ model Deal {
   expectedClose  DateTime?
   notes          String?
   lostReason     String?
+  // Leigusamningur (einkum atvinnuhúsnæði)
+  leaseStart        DateTime?
+  leaseEnd          DateTime?
+  leaseMonthlyRent  Int?
+  leaseIndexed      Boolean   @default(false) // vísitölutengd leiga
+  leaseIndexBase    String?   // t.d. „VNV feb. 2026“
+  leaseNoticeMonths Int?      // uppsagnar-/endurnýjunarfrestur í mánuðum
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   propertyId     String?
@@ -126,6 +167,7 @@ model Deal {
   offers     Offer[]
   activities Activity[]
   tasks      Task[]
+  documents  Document[]
 }
 
 model ChecklistItem {
@@ -156,6 +198,7 @@ model Showing {
   startsAt   DateTime
   endsAt     DateTime?
   notes      String?
+  outlookEventId String?
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   attendees  ShowingAttendee[]

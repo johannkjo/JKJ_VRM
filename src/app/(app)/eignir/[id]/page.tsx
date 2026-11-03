@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Activities from "@/components/Activities";
 import { ConfirmSubmit, Submit } from "@/components/Buttons";
 import ClaudeButton from "@/components/ClaudeButton";
+import Documents from "@/components/Documents";
 import Tasks from "@/components/Tasks";
 import { ownerScope, requireUser } from "@/lib/auth";
 import { AD_STATUS, DEAL_STAGES, LISTING, PROPERTY_STATUS, PROPERTY_TYPES, SHOWING_KINDS, label } from "@/lib/constants";
@@ -23,6 +24,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       showings: { orderBy: { startsAt: "desc" }, include: { _count: { select: { attendees: true } } } },
       activities: { orderBy: { occurredAt: "desc" }, include: { user: { select: { name: true } } } },
       tasks: { orderBy: [{ done: "asc" }, { dueAt: "asc" }] },
+      documents: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!p) notFound();
@@ -102,6 +104,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="space-y-4 lg:col-span-2">
+          <Documents items={p.documents} links={{ propertyId: id }} back={back} title="Myndir og skjöl (söluyfirlit, eignaskiptayfirlýsing…)" />
+
           <section className="card">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="h2 mb-0">Eignalýsing</h2>

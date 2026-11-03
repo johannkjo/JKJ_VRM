@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Activities from "@/components/Activities";
 import { ConfirmSubmit, Submit } from "@/components/Buttons";
 import Tasks from "@/components/Tasks";
+import Documents from "@/components/Documents";
 import { ownerScope, requireUser } from "@/lib/auth";
 import { DEAL_STAGES, LISTING, OFFER_STATUS, label } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -23,6 +24,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       offers: { include: { bidder: true }, orderBy: { createdAt: "desc" } },
       activities: { orderBy: { occurredAt: "desc" }, include: { user: { select: { name: true } } } },
       tasks: { orderBy: [{ done: "asc" }, { dueAt: "asc" }] },
+      documents: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!d) notFound();
@@ -62,6 +64,16 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             <p><span className="text-slate-500">Áætluð lok:</span> {date(d.expectedClose)}</p>
             {d.notes && <p className="whitespace-pre-wrap pt-2">{d.notes}</p>}
           </section>
+
+          {d.listing === "RENT" && (d.leaseStart || d.leaseEnd || d.leaseMonthlyRent) && (
+            <section className="card space-y-1 text-sm">
+              <h2 className="h2">Leigusamningur</h2>
+              <p><span className="text-slate-500">Tímabil:</span> {date(d.leaseStart)} – {date(d.leaseEnd)}</p>
+              <p><span className="text-slate-500">Mánaðarleiga:</span> {kr(d.leaseMonthlyRent)}</p>
+              <p><span className="text-slate-500">Vísitölutengd:</span> {d.leaseIndexed ? `Já${d.leaseIndexBase ? ` (${d.leaseIndexBase})` : ""}` : "Nei"}</p>
+              <p><span className="text-slate-500">Áminning:</span> {d.leaseNoticeMonths ?? 6} mán. fyrir lok</p>
+            </section>
+          )}
 
           <section className="card">
             <h2 className="h2">Gátlisti <span className="text-sm font-normal text-slate-500">{doneCount}/{d.checklist.length}</span></h2>
@@ -131,6 +143,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             </ul>
           </section>
           <Tasks items={d.tasks} links={{ dealId: id }} back={back} />
+          <Documents items={d.documents} links={{ dealId: id }} back={back} title="Skjöl (samningar, tilboð, vottorð)" />
           <Activities items={d.activities} links={{ dealId: id }} back={back} />
         </div>
       </div>

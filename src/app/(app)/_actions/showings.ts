@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dt, int, req, str } from "@/lib/forms";
+import { appUrl, createEvent, deleteEvent } from "@/lib/integrations/microsoft";
+import { SHOWING_KINDS } from "@/lib/constants";
 import { assertCanAccess } from "./guard";
 
 export async function createShowing(fd: FormData) {
@@ -14,9 +16,24 @@ export async function createShowing(fd: FormData) {
   assertCanAccess(s, p.agentId);
   const startsAt = dt(fd, "startsAt");
   if (!startsAt) throw new Error("Tími vantar");
-  await db.showing.create({
-    data: { propertyId, kind: req(fd, "kind"), startsAt, endsAt: dt(fd, "endsAt"), notes: str(fd, "notes") },
+  const kind = req(fd, "kind");
+  const endsAt = dt(fd, "endsAt");
+  const sh = await db.showing.create({
+    data: { propertyId, kind, startsAt, endsAt, notes: str(fd, "notes") },
   });
+  // Setja í Outlook-dagatal ef notandi hefur tengt Microsoft 365
+  try {
+    const eventId = await createEvent(s.userId, {
+      subject: `${SHOWING_KINDS[kind as keyof typeof SHOWING_KINDS] ?? "Sýning"} – ${p.address}`,
+      start: startsAt,
+      end: endsAt ?? new Date(startsAt.getTime() + (kind === "OPEN_HOUSE" ? 60 : 30) * 60_000),
+      location: `${p.address}, ${p.postcode} ${p.city ?? ""}`.trim(),
+      body: `<p><a href="${appUrl()}/opid-hus/${sh.id}">Opna gestaskráningu í CRM</a></p>`,
+    });
+    if (eventId) await db.showing.update({ where: { id: sh.id }, data: { outlookEventId: eventId } });
+  } catch (e) {
+    console.error("Outlook event failed", e);
+  }
   revalidatePath(`/eignir/${propertyId}`);
   revalidatePath("/dagatal");
   revalidatePath("/");
@@ -26,6 +43,13 @@ export async function deleteShowing(id: string) {
   const s = await requireUser();
   const sh = await db.showing.findUniqueOrThrow({ where: { id }, include: { property: true } });
   assertCanAccess(s, sh.property.agentId);
+  if (sh.outlookEventId) {
+    try {
+      await deleteEvent(s.userId, sh.outlookEventId);
+    } catch (e) {
+      console.error("Outlook delete failed", e);
+    }
+  }
   await db.showing.delete({ where: { id } });
   revalidatePath("/dagatal");
   redirect(`/eignir/${sh.propertyId}`);

@@ -2,7 +2,7 @@
 
 Sérsmíðað CRM-kerfi fyrir sölu og leigu fasteigna, þar á meðal atvinnuhúsnæðis. Það virkar í tölvu, í síma og á opnu húsi.
 
-## Hvað kerfið gerir (áfangi 1)
+## Hvað kerfið gerir
 
 | Hluti | Lýsing |
 |---|---|
@@ -19,6 +19,10 @@ Sérsmíðað CRM-kerfi fyrir sölu og leigu fasteigna, þar á meðal atvinnuh�
 | **Opið hús** | Gestaskráning í síma. Gestir verða sjálfkrafa tengiliðir og þeir sem gefa 4–5 í áhuga fá eftirfylgniverkefni næsta dag |
 | **Verkefni og dagatal** | Í vanskilum, í dag, þessa viku. Vikudagatal með sýningum og verkefnum |
 | **Samskiptasaga** | Símtöl, tölvupóstar, fundir og athugasemdir á tengilið, eign eða sölu, með valkvæðu eftirfylgniverkefni |
+| **Microsoft 365** | Sýningar fara sjálfkrafa í Outlook-dagatalið, Outlook-viðburðir sjást í dagatali kerfisins, nýlegir póstar birtast á tengilið og hægt er að senda póst úr kerfinu (hann skráist í samskiptasögu) |
+| **Claude, aðstoð** | „Samantekt“ dregur saman stöðu viðskiptavinar og stingur upp á næstu skrefum. „Drög með Claude“ skrifar tölvupóst út frá sögunni |
+| **Myndir og skjöl** | Ljósmyndir, söluyfirlit, samningar og vottorð á eign, sölu eða tengilið. Fyrsta myndin er forsíðumynd eignar. Aðeins þeir sem hafa aðgang að færslunni geta opnað skjölin |
+| **Leigusamningar** | Upphaf, lok, mánaðarleiga og vísitölutenging. Áminningar um endurnýjun (sjálfgefið 6 mán. fyrir lok) og yfirlit yfir samninga sem renna út á næstu 12 mánuðum |
 | **Aðgangsstýring** | Stjórnandi sér allt. Fasteignasali sér eingöngu eigin gögn. Notendur eru stofnaðir og gerðir óvirkir undir ⚙︎ |
 
 ## Uppsetning
@@ -39,6 +43,20 @@ npm run dev               # opnaðu http://localhost:3000
 
 Settu `ANTHROPIC_API_KEY` í `.env` til að virkja sjálfvirkar eignalýsingar.
 
+### Microsoft 365 (Outlook)
+
+Þetta er gert einu sinni og tekur um 5 mínútur:
+
+1. Farðu á **https://entra.microsoft.com**, svo **Applications → App registrations → New registration**
+2. Nafn: `JKJ CRM`. Supported account types: *Accounts in this organizational directory only*
+3. Redirect URI: veldu **Web** og settu `http://localhost:3000/api/microsoft/callback` (og síðar `https://<lénið-þitt>/api/microsoft/callback`)
+4. Undir **Certificates & secrets → New client secret**: afritaðu *Value* í `MS_CLIENT_SECRET`
+5. Afritaðu *Application (client) ID* í `MS_CLIENT_ID` og *Directory (tenant) ID* í `MS_TENANT_ID`
+6. Undir **API permissions → Add → Microsoft Graph → Delegated**: `Calendars.ReadWrite`, `Mail.Read`, `Mail.Send`, `User.Read`, `offline_access`. Smelltu svo á **Grant admin consent**
+7. Endurræstu kerfið, farðu í ⚙︎ og smelltu á **Tengja Microsoft 365**
+
+Aðgangstókar eru geymdir dulkóðaðir (AES-256-GCM) í gagnagrunninum.
+
 ### auglýsing.app
 
 Settu `AUGLYSING_API_URL` og `AUGLYSING_API_KEY` í `.env`. Án þeirra eru auglýsingar vistaðar sem drög. Aðlaga þarf `src/lib/integrations/auglysing.ts` að API-i auglýsing.app þegar skjölun þess liggur fyrir.
@@ -48,7 +66,8 @@ Settu `AUGLYSING_API_URL` og `AUGLYSING_API_KEY` í `.env`. Án þeirra eru augl
 - **Next.js 15** (App Router, Server Actions) + **React 19** + **Tailwind CSS 4**
 - **Prisma** + **SQLite** (einn `provider` í `prisma/schema.prisma` skiptir yfir í PostgreSQL fyrir hýsingu)
 - Innskráning: bcrypt + undirrituð JWT-lota í httpOnly-köku
-- `@anthropic-ai/sdk` fyrir Claude
+- `@anthropic-ai/sdk` fyrir Claude, Microsoft Graph (REST) fyrir Outlook
+- Skjöl vistuð á diski (`UPLOAD_DIR`), afhent í gegnum `/api/skjol/[id]` með aðgangsathugun
 
 ```
 src/
@@ -64,10 +83,9 @@ prisma/               gagnalíkan og upphafsgögn
 
 ## Næstu áfangar (tillögur)
 
-1. **Outlook / Microsoft 365**: samstilla dagatal (sýningar ↔ Outlook), skrá tölvupósta sjálfkrafa á tengiliði og senda póst úr kerfinu
-2. **auglýsing.app**: klára tenginguna þegar API-skjölun fæst, með myndum og stöðu auglýsinga
-3. **Skjöl og myndir**: hlaða upp söluyfirliti, ljósmyndum og samningum á eign eða sölu
-4. **Claude, meira**: samantekt á sögu tengiliðs, drög að eftirfylgnipósti og verðmatsminnisblað
-5. **Sjálfvirkni**: tölvupóstur til kaupenda þegar ný eign passar og áminningar um afmæli kaupsamninga
-6. **Atvinnuleiga**: leigusamningar með lokadögum, vísitölutengingu og áminningum um endurnýjun
-7. **Hýsing**: PostgreSQL + hýsing (t.d. Vercel eða Railway) og eigið lén
+1. **auglýsing.app**: klára tenginguna (með myndum) þegar API-ið liggur fyrir
+2. **Hýsing**: á netinu með eigin léni, svo kerfið virki í símanum hvar sem er
+3. **Verdmat**: tengja verðmatstólið (Lovable) við eignir í CRM
+4. **Remax-vefurinn**: fyrirspurnir af vefnum verði sjálfkrafa tengiliðir og verkefni
+5. **Sjálfvirkni**: tölvupóstur til kaupenda þegar ný eign passar og eftirfylgni eftir afhendingu
+6. **Teymi**: deila tengiliðum og eignum milli fasteignasala

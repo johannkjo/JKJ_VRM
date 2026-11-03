@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { removeFilesFor } from "@/lib/storage";
 import { DEAL_STAGES, DEFAULT_RENT_CHECKLIST, DEFAULT_SALE_CHECKLIST, label } from "@/lib/constants";
-import { dt, float, int, req, str } from "@/lib/forms";
+import { bool, dt, float, int, req, str } from "@/lib/forms";
 import { assertCanAccess } from "./guard";
 
 async function load(id: string) {
@@ -28,7 +29,30 @@ function dealData(fd: FormData) {
     propertyId: str(fd, "propertyId"),
     buyerId: str(fd, "buyerId"),
     sellerId: str(fd, "sellerId"),
+    leaseStart: dt(fd, "leaseStart"),
+    leaseEnd: dt(fd, "leaseEnd"),
+    leaseMonthlyRent: int(fd, "leaseMonthlyRent"),
+    leaseIndexed: bool(fd, "leaseIndexed"),
+    leaseIndexBase: str(fd, "leaseIndexBase"),
+    leaseNoticeMonths: int(fd, "leaseNoticeMonths"),
   };
+}
+
+/** Býr til áminningar um endurnýjun og lok leigusamnings. */
+async function createLeaseReminders(d: { id: string; title: string; agentId: string; leaseEnd: Date | null; leaseNoticeMonths: number | null; sellerId: string | null; propertyId: string | null }) {
+  if (!d.leaseEnd) return;
+  const existing = await db.task.count({ where: { dealId: d.id, title: { startsWith: "Leigusamningur" } } });
+  if (existing > 0) return;
+  const notice = new Date(d.leaseEnd);
+  notice.setUTCMonth(notice.getUTCMonth() - (d.leaseNoticeMonths ?? 6));
+  notice.setUTCHours(10, 0, 0, 0);
+  const base = { userId: d.agentId, dealId: d.id, contactId: d.sellerId, propertyId: d.propertyId, priority: 1 };
+  await db.task.createMany({
+    data: [
+      { ...base, title: `Leigusamningur: ræða endurnýjun við leigusala og leigutaka – ${d.title}`, dueAt: notice },
+      { ...base, title: `Leigusamningur rennur út – ${d.title}`, dueAt: d.leaseEnd },
+    ],
+  });
 }
 
 export async function createDeal(fd: FormData) {
@@ -48,7 +72,8 @@ export async function createDeal(fd: FormData) {
 
 export async function updateDeal(id: string, fd: FormData) {
   await load(id);
-  await db.deal.update({ where: { id }, data: dealData(fd) });
+  const updated = await db.deal.update({ where: { id }, data: dealData(fd) });
+  if (updated.stage === "CLOSED" && updated.listing === "RENT") await createLeaseReminders(updated);
   revalidatePath(`/solur/${id}`);
   redirect(`/solur/${id}`);
 }
@@ -58,6 +83,7 @@ export async function moveDeal(id: string, stage: string) {
   const { s, d } = await load(id);
   if (d.stage === stage) return;
   await db.deal.update({ where: { id }, data: { stage } });
+  if (stage === "CLOSED" && d.listing === "RENT") await createLeaseReminders(d);
   if (d.propertyId) {
     const map: Record<string, string> = {
       MARKETING: "ACTIVE",
@@ -82,6 +108,7 @@ export async function moveDeal(id: string, stage: string) {
 
 export async function deleteDeal(id: string) {
   await load(id);
+  await removeFilesFor({ dealId: id });
   await db.deal.delete({ where: { id } });
   revalidatePath("/solur");
   redirect("/solur");

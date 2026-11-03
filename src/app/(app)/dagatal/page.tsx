@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ownerScope, requireUser } from "@/lib/auth";
 import { SHOWING_KINDS, label } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { listEvents, type OutlookEvent } from "@/lib/integrations/microsoft";
 
 const TZ = "Atlantic/Reykjavik";
 
@@ -25,6 +26,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     }),
   ]);
 
+  // Outlook-viðburðir (ef tengt). Sleppum þeim sem CRM bjó sjálft til (sýningar).
+  let outlook: OutlookEvent[] | null = null;
+  let outlookError: string | null = null;
+  try {
+    outlook = await listEvents(s.userId, start, end);
+  } catch (e) {
+    outlookError = (e as Error).message;
+  }
+  const crmEventIds = new Set(showings.map((x) => x.outlookEventId).filter(Boolean));
+  const external = (outlook ?? []).filter((e) => !crmEventIds.has(e.id));
+
   const days = Array.from({ length: 7 }, (_, i) => new Date(start.getTime() + i * 864e5));
   const sameDay = (a: Date, b: Date) => a.toISOString().slice(0, 10) === b.toISOString().slice(0, 10);
   const time = (d: Date) => d.toLocaleTimeString("is-IS", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
@@ -40,11 +52,16 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           <Link href={`/dagatal?vika=${offset + 1}`} className="btn-secondary">→</Link>
         </div>
       </div>
-      <p className="muted">Sýningar eru skráðar á síðu hverrar eignar. Tenging við Outlook-dagatal kemur í næsta áfanga.</p>
+      <p className="muted">
+        Sýningar eru skráðar á síðu hverrar eignar.{" "}
+        {outlook ? "Grænt = CRM, blátt = Outlook." : <>Tengdu <Link href="/notendur" className="link">Microsoft 365</Link> til að sjá Outlook-dagatalið hér.</>}
+      </p>
+      {outlookError && <p className="text-sm text-red-600">Outlook: {outlookError}</p>}
       <div className="grid gap-3 md:grid-cols-7">
         {days.map((d) => {
           const sh = showings.filter((x) => sameDay(x.startsAt, d));
           const ts = tasks.filter((x) => x.dueAt && sameDay(x.dueAt, d));
+          const ev = external.filter((x) => sameDay(x.start, d));
           return (
             <div key={d.toISOString()} className={`card min-h-32 p-3 ${sameDay(d, today) ? "ring-2 ring-brand-500" : ""}`}>
               <p className="mb-2 text-xs font-semibold uppercase text-slate-500">
@@ -56,6 +73,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                     <Link href={`/opid-hus/${x.id}`} className="block rounded bg-brand-50 p-1.5 text-brand-700 hover:bg-brand-100">
                       <b>{time(x.startsAt)}</b> {label(SHOWING_KINDS, x.kind)}<br />{x.property.address}
                     </Link>
+                  </li>
+                ))}
+                {ev.map((x) => (
+                  <li key={x.id}>
+                    <a href={x.webLink} target="_blank" rel="noreferrer" className="block rounded bg-sky-50 p-1.5 text-sky-800 hover:bg-sky-100">
+                      <b>{time(x.start)}</b> {x.subject}
+                    </a>
                   </li>
                 ))}
                 {ts.map((t) => (

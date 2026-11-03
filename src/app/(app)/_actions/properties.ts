@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { removeFilesFor } from "@/lib/storage";
 import { bool, int, float, req, str } from "@/lib/forms";
 import { publishToAuglysing } from "@/lib/integrations/auglysing";
 import { assertCanAccess } from "./guard";
@@ -63,6 +64,7 @@ export async function setPropertyStatus(id: string, status: string) {
 
 export async function deleteProperty(id: string) {
   await load(id);
+  await removeFilesFor({ propertyId: id });
   await db.$transaction([
     db.deal.updateMany({ where: { propertyId: id }, data: { propertyId: null } }),
     db.property.delete({ where: { id } }),
